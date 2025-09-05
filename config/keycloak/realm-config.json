@@ -1,0 +1,74 @@
+{
+  "realm": "app-realm",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 3,
+  "roles": {
+    "realm": [
+      {
+        "name": "user",
+        "description": "Regular user with basic permissions"
+      },
+      {
+        "name": "admin",
+        "description": "Administrator with full permissions"
+      },
+      {
+        "name": "manager",
+        "description": "Manager with elevated permissions"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "app-client",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "change-this-in-production",
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "https://your-production-domain.com/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3000",
+        "https://your-production-domain.com"
+      ],
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "fullScopeAllowed": false,
+      "directAccessGrantsEnabled": true
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@example.com",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "change-this-in-production",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin"],
+      "attributes": {
+        "firstName": ["Admin"],
+        "lastName": ["User"]
+      }
+    }
+  ]
+}
