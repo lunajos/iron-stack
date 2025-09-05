@@ -138,6 +138,22 @@ services:
       timeout: 3s
       retries: 40
     profiles: ["", "persist"]
+    
+  # ---------- Kibana ----------
+  kibana:
+    image: "docker.elastic.co/kibana/kibana:${ES_VERSION}"
+    container_name: kibana
+    depends_on:
+      es: { condition: service_healthy }
+    environment:
+      - ELASTICSEARCH_HOSTS=http://es:9200
+    ports: ["5601:5601"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:5601/api/status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    profiles: ["", "persist"]
 
   es_persist:
     image: "docker.elastic.co/elasticsearch/elasticsearch:${ES_VERSION}"
@@ -158,6 +174,23 @@ services:
       interval: 5s
       timeout: 3s
       retries: 40
+    profiles: ["persist"]
+    
+  kibana_persist:
+    image: "docker.elastic.co/kibana/kibana:${ES_VERSION}"
+    container_name: kibana
+    depends_on:
+      es_persist: { condition: service_healthy }
+    environment:
+      - ELASTICSEARCH_HOSTS=http://es:9200
+    ports: ["5601:5601"]
+    volumes:
+      - ./data/kibana:/usr/share/kibana/data:Z
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:5601/api/status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
     profiles: ["persist"]
 
   # ---------- Prometheus (ALWAYS persistent) ----------

@@ -77,6 +77,14 @@ podman run -d --name grafana --network iron-stack-net -p 3000:3000 \
   docker.io/grafana/grafana:11.2.0
 ```
 
+Start Kibana:
+
+```bash
+podman run -d --name kibana --network iron-stack-net -p 5601:5601 \
+  -e "ELASTICSEARCH_HOSTS=http://es:9200" \
+  docker.elastic.co/kibana/kibana:8.14.3
+```
+
 ### Stopping the Stack
 
 ```bash
@@ -86,8 +94,8 @@ make down
 Or manually:
 
 ```bash
-podman stop postgres es grafana
-podman rm postgres es grafana
+podman stop postgres es grafana kibana
+podman rm postgres es grafana kibana
 ```
 
 ### Resetting Data
@@ -126,6 +134,7 @@ podman logs grafana
 | Valkey        | localhost:6379           | No auth (configurable)  | Not Running  |
 | Keycloak      | http://localhost:18080   | admin / admin123        | Not Running  |
 | Elasticsearch | http://localhost:9200    | No auth                 | Running      |
+| Kibana        | http://localhost:5601    | No auth                 | Running      |
 | Prometheus    | http://localhost:9090    | No auth                 | Not Running  |
 | Grafana       | http://localhost:3000    | admin / admin123        | Running      |
 
