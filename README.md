@@ -15,11 +15,24 @@ A mini infrastructure deployment using Podman Compose with the following service
 - Easy to use Makefile commands for management
 - Environment variables configured in `.env` file
 - Profiles for ephemeral or persistent deployments
+- Container networking for inter-service communication
 
 ## Prerequisites
 
 - Podman and Podman Compose installed
 - Sufficient system resources to run all services
+
+## Network Setup
+
+The stack uses a dedicated network called `iron-stack-net` for container communication. This ensures services can resolve each other by hostname (e.g., Keycloak can connect to PostgreSQL using the hostname `postgres`).
+
+The network is automatically created when you start the stack with the provided commands. If you need to create it manually:
+
+```bash
+podman network create iron-stack-net
+```
+
+All services are configured to use this network in the `podman-compose.yml` file.
 
 ## Getting Started
 
@@ -162,6 +175,15 @@ podman logs grafana
 - `valkey.conf`: Valkey configuration
 
 ## Troubleshooting
+
+### Network Issues
+
+If services can't communicate with each other (e.g., Keycloak can't connect to PostgreSQL):
+
+1. Verify the network exists: `podman network ls`
+2. Check that containers are on the same network: `podman inspect <container_name> | grep -A 10 Networks`
+3. Try pinging between containers: `podman exec <container_name> ping <other_container_name>`
+4. Ensure services are using hostnames that match container names
 
 ### Permission Issues
 
