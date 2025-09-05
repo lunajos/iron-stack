@@ -85,6 +85,20 @@ podman run -d --name kibana --network iron-stack-net -p 5601:5601 \
   docker.elastic.co/kibana/kibana:8.14.3
 ```
 
+Start Keycloak (first time setup):
+
+```bash
+podman run -d --name keycloak --network iron-stack-net -p 18080:18080 \
+  -e KC_DB=postgres -e KC_DB_URL_HOST=postgres -e KC_DB_URL_DATABASE=keycloak \
+  -e KC_DB_USERNAME=kc -e KC_DB_PASSWORD=kcpass -e KC_HTTP_PORT=18080 \
+  -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin123 \
+  -e KC_HOSTNAME=localhost \
+  -v /data/Projects/iron-stack/data/keycloak:/opt/keycloak/data:Z \
+  quay.io/keycloak/keycloak:26.0 start
+```
+
+> **Note**: For Keycloak, do not use the `--optimized` flag on first startup. See [Keycloak Setup Guide](docs/keycloak-setup.md) for details on optimized mode.
+
 ### Stopping the Stack
 
 ```bash
@@ -132,7 +146,7 @@ podman logs grafana
 |---------------|--------------------------|-------------------------|-------------|
 | PostgreSQL    | localhost:15432          | kc / kcpass             | Running      |
 | Valkey        | localhost:6379           | No auth (configurable)  | Not Running  |
-| Keycloak      | http://localhost:18080   | admin / admin123        | Not Running  |
+| Keycloak      | http://localhost:18080   | admin / admin123        | Running      |
 | Elasticsearch | http://localhost:9200    | No auth                 | Running      |
 | Kibana        | http://localhost:5601    | No auth                 | Running      |
 | Prometheus    | http://localhost:9090    | No auth                 | Not Running  |

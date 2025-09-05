@@ -72,7 +72,7 @@ services:
   keycloak:
     image: "quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}"
     container_name: keycloak
-    command: ["start", "--optimized"]
+    command: ["start"]
     depends_on:
       postgres: { condition: service_healthy }
     environment:
@@ -96,7 +96,7 @@ services:
   keycloak_persist:
     image: "quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}"
     container_name: keycloak
-    command: ["start", "--optimized"]
+    command: ["start"]
     depends_on:
       postgres_persist: { condition: service_started }
     environment:
