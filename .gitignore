@@ -1,0 +1,23 @@
+# Data directories
+data/*/
+
+# Environment variables (may contain sensitive information)
+# Uncomment if you want to exclude .env from git
+# .env
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+.vscode/
+*.sublime-*
