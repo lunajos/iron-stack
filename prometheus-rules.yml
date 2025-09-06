@@ -1,0 +1,29 @@
+groups:
+- name: example
+  rules:
+  - alert: HighCPULoad
+    expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100) > 80
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High CPU load (instance {{ $labels.instance }})"
+      description: "CPU load is > 80%\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
+
+  - alert: HighMemoryLoad
+    expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 80
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High memory load (instance {{ $labels.instance }})"
+      description: "Memory load is > 80%\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
+
+  - alert: HostOutOfDiskSpace
+    expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes * 100) < 10
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Host out of disk space (instance {{ $labels.instance }})"
+      description: "Disk is almost full (< 10% left)\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"

@@ -296,3 +296,58 @@ services:
       retries: 30
     profiles: ["persist"]
 
+  # ---------- Mailpit (Email Testing) ----------
+  mailpit:
+    image: "axllent/mailpit:latest"
+    container_name: mailpit
+    networks:
+      - iron-stack-net
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    volumes:
+      - ./data/mailpit:/data:Z
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8025/api/v1/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    profiles: ["", "persist"]
+
+  # ---------- Node Exporter (System Metrics) ----------
+  node_exporter:
+    image: "quay.io/prometheus/node-exporter:latest"
+    container_name: node-exporter
+    networks:
+      - iron-stack-net
+    command: ["--path.rootfs=/host"]
+    ports:
+      - "9100:9100"
+    volumes:
+      - "/:/host:ro,rslave"
+    pid: "host"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9100/metrics"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    profiles: ["", "persist"]
+
+  # ---------- Alertmanager (Alert Handling) ----------
+  alertmanager:
+    image: "quay.io/prometheus/alertmanager:latest"
+    container_name: alertmanager
+    networks:
+      - iron-stack-net
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/config.yml:Z
+      - ./data/alertmanager:/alertmanager:Z
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9093/-/healthy"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    profiles: ["", "persist"]
+

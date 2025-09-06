@@ -129,6 +129,31 @@ podman run -d --name minio --network iron-stack-net -p 9000:9000 -p 9001:9001 \
   quay.io/minio/minio:latest server /data --console-address ":9001"
 ```
 
+Start Mailpit (Email testing tool):
+
+```bash
+podman run -d --name mailpit --network iron-stack-net -p 8025:8025 -p 1025:1025 \
+  -v /data/Projects/iron-stack/data/mailpit:/data:Z \
+  axllent/mailpit
+```
+
+Start node_exporter (System metrics exporter):
+
+```bash
+podman run -d --name node-exporter --network iron-stack-net -p 9100:9100 \
+  -v "/:/host:ro,rslave" --pid="host" \
+  quay.io/prometheus/node-exporter:latest --path.rootfs=/host
+```
+
+Start Alertmanager (Alert handling & notifications):
+
+```bash
+podman run -d --name alertmanager --network iron-stack-net -p 9093:9093 \
+  -v /data/Projects/iron-stack/alertmanager.yml:/etc/alertmanager/config.yml:Z \
+  -v /data/Projects/iron-stack/data/alertmanager:/alertmanager:Z \
+  quay.io/prometheus/alertmanager:latest
+```
+
 Start Keycloak (first time setup):
 
 ```bash
@@ -186,17 +211,20 @@ podman logs grafana
 
 ## Service Access
 
-| Service       | URL                      | Default Credentials     | Status       |
-|---------------|--------------------------|-------------------------|-------------|
-| PostgreSQL    | localhost:15432          | kc / kcpass             | Running      |
-| Valkey        | localhost:6379           | No auth (configurable)  | Running      |
-| Keycloak      | http://localhost:18080   | admin / admin123        | Running      |
-| Elasticsearch | http://localhost:9200    | No auth                 | Running      |
-| Kibana        | http://localhost:5601    | No auth                 | Running      |
-| Prometheus    | http://localhost:9090    | No auth                 | Running      |
-| Grafana       | http://localhost:3000    | admin / admin123        | Running      |
-| MinIO         | http://localhost:9000    | minioadmin / minioadmin | Running      |
-| MinIO Console | http://localhost:9001    | minioadmin / minioadmin | Running      |
+| Service       | URL                      | Default Credentials     | Status       | Description                       |
+|---------------|--------------------------|-------------------------|-------------|-----------------------------------|
+| PostgreSQL    | localhost:15432          | kc / kcpass             | Running      | Database                          |
+| Valkey        | localhost:6379           | No auth (configurable)  | Running      | Key-value store                   |
+| Keycloak      | http://localhost:18080   | admin / admin123        | Running      | Identity & access management      |
+| Elasticsearch | http://localhost:9200    | No auth                 | Running      | Search & analytics engine         |
+| Kibana        | http://localhost:5601    | No auth                 | Running      | Elasticsearch frontend            |
+| Prometheus    | http://localhost:9090    | No auth                 | Running      | Metrics collection & storage      |
+| Grafana       | http://localhost:3000    | admin / admin123        | Running      | Dashboards & visualization        |
+| MinIO         | http://localhost:9000    | minioadmin / minioadmin | Not Running  | S3-compatible object storage      |
+| MinIO Console | http://localhost:9001    | minioadmin / minioadmin | Not Running  | MinIO web UI                     |
+| Mailpit       | http://localhost:8025    | No auth                 | Running      | Email testing tool                |
+| node_exporter | http://localhost:9100    | No auth                 | Running      | System metrics exporter           |
+| Alertmanager  | http://localhost:9093    | No auth                 | Running      | Alert handling & notifications    |
 
 ## Directory Structure
 
