@@ -146,29 +146,16 @@ services:
       - bootstrap.memory_lock=true
       - ES_JAVA_OPTS=-Xms${ES_JAVA_MEM} -Xmx${ES_JAVA_MEM}
       - xpack.security.enabled=true
-      - xpack.security.transport.ssl.enabled=true
-      - xpack.security.transport.ssl.verification_mode=certificate
-      - xpack.security.transport.ssl.keystore.path=/usr/share/elasticsearch/config/certs/es.p12
-      - xpack.security.transport.ssl.truststore.path=/usr/share/elasticsearch/config/certs/es.p12
-      - xpack.security.transport.ssl.keystore.password=changeit
-      - xpack.security.transport.ssl.truststore.password=changeit
-      - xpack.security.http.ssl.enabled=true
-      - xpack.security.http.ssl.keystore.path=/usr/share/elasticsearch/config/certs/es.p12
-      - xpack.security.http.ssl.truststore.path=/usr/share/elasticsearch/config/certs/es.p12
-      - xpack.security.http.ssl.keystore.password=changeit
-      - xpack.security.http.ssl.truststore.password=changeit
-      - xpack.license.self_generated.type=basic
-      - xpack.fleet.enabled=true
       - discovery.type=single-node
+      - xpack.license.self_generated.type=basic
     ulimits:
       memlock: { soft: -1, hard: -1 }
       nofile:  { soft: 65536, hard: 65536 }
     ports: ["9200:9200"]
     volumes:
-      - ./config/elasticsearch/certs/es/es.p12:/usr/share/elasticsearch/config/certs/es.p12:ro,Z
-      - ./config/elasticsearch/certs/ca/ca.crt:/usr/share/elasticsearch/config/certs/ca.crt:ro,Z
+      - ./data/elasticsearch:/usr/share/elasticsearch/data:Z
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS --cacert /usr/share/elasticsearch/config/certs/ca.crt https://127.0.0.1:9200 >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS -u elastic:${ELASTIC_PASSWORD} http://127.0.0.1:9200 >/dev/null || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 40
@@ -183,24 +170,17 @@ services:
     depends_on:
       es: { condition: service_healthy }
     environment:
-      - ELASTICSEARCH_HOSTS=https://es:9200
-      - ELASTICSEARCH_USERNAME=elastic
-      - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}
-      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=/usr/share/kibana/config/certs/ca.crt
-      - SERVER_SSL_ENABLED=true
-      - SERVER_SSL_CERTIFICATE=/usr/share/kibana/config/certs/kibana.crt
-      - SERVER_SSL_KEY=/usr/share/kibana/config/certs/kibana.key
+      - ELASTICSEARCH_HOSTS=http://es:9200
+      - ELASTICSEARCH_SERVICEACCOUNTTOKEN=${FLEET_SERVER_SERVICE_TOKEN}
       - XPACK_SECURITY_ENCRYPTIONKEY=${KIBANA_ENCRYPTION_KEY}
       - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${KIBANA_ENCRYPTION_KEY}
       - XPACK_REPORTING_ENCRYPTIONKEY=${KIBANA_ENCRYPTION_KEY}
       - XPACK_FLEET_ENABLED=true
     ports: ["5601:5601"]
     volumes:
-      - ./config/elasticsearch/certs/ca/ca.crt:/usr/share/kibana/config/certs/ca.crt:ro,Z
-      - ./config/elasticsearch/certs/kibana/kibana.crt:/usr/share/kibana/config/certs/kibana.crt:ro,Z
-      - ./config/elasticsearch/certs/kibana/kibana.key:/usr/share/kibana/config/certs/kibana.key:ro,Z
+      - ./data/kibana:/usr/share/kibana/data:Z
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS --cacert /usr/share/kibana/config/certs/ca.crt https://127.0.0.1:5601/api/status || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:5601/api/status || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -216,30 +196,16 @@ services:
       - bootstrap.memory_lock=true
       - ES_JAVA_OPTS=-Xms${ES_JAVA_MEM} -Xmx${ES_JAVA_MEM}
       - xpack.security.enabled=true
-      - xpack.security.transport.ssl.enabled=true
-      - xpack.security.transport.ssl.verification_mode=certificate
-      - xpack.security.transport.ssl.keystore.path=/usr/share/elasticsearch/config/certs/es.p12
-      - xpack.security.transport.ssl.truststore.path=/usr/share/elasticsearch/config/certs/es.p12
-      - xpack.security.transport.ssl.keystore.password=changeit
-      - xpack.security.transport.ssl.truststore.password=changeit
-      - xpack.security.http.ssl.enabled=true
-      - xpack.security.http.ssl.keystore.path=/usr/share/elasticsearch/config/certs/es.p12
-      - xpack.security.http.ssl.truststore.path=/usr/share/elasticsearch/config/certs/es.p12
-      - xpack.security.http.ssl.keystore.password=changeit
-      - xpack.security.http.ssl.truststore.password=changeit
-      - xpack.license.self_generated.type=basic
-      - xpack.fleet.enabled=true
       - discovery.type=single-node
+      - xpack.license.self_generated.type=basic
     ulimits:
       memlock: { soft: -1, hard: -1 }
       nofile:  { soft: 65536, hard: 65536 }
     ports: ["9200:9200"]
     volumes:
-      - ./config/elasticsearch/certs/es/es.p12:/usr/share/elasticsearch/config/certs/es.p12:ro,Z
-      - ./config/elasticsearch/certs/ca/ca.crt:/usr/share/elasticsearch/config/certs/ca.crt:ro,Z
       - ./data/elasticsearch:/usr/share/elasticsearch/data:Z
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS --cacert /usr/share/elasticsearch/config/certs/ca.crt https://127.0.0.1:9200 >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS -u elastic:${ELASTIC_PASSWORD} http://127.0.0.1:9200 >/dev/null || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 40
@@ -253,25 +219,17 @@ services:
     depends_on:
       es_persist: { condition: service_healthy }
     environment:
-      - ELASTICSEARCH_HOSTS=https://es:9200
-      - ELASTICSEARCH_USERNAME=elastic
-      - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}
-      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=/usr/share/kibana/config/certs/ca.crt
-      - SERVER_SSL_ENABLED=true
-      - SERVER_SSL_CERTIFICATE=/usr/share/kibana/config/certs/kibana.crt
-      - SERVER_SSL_KEY=/usr/share/kibana/config/certs/kibana.key
+      - ELASTICSEARCH_HOSTS=http://es:9200
+      - ELASTICSEARCH_SERVICEACCOUNTTOKEN=${FLEET_SERVER_SERVICE_TOKEN}
       - XPACK_SECURITY_ENCRYPTIONKEY=${KIBANA_ENCRYPTION_KEY}
       - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${KIBANA_ENCRYPTION_KEY}
       - XPACK_REPORTING_ENCRYPTIONKEY=${KIBANA_ENCRYPTION_KEY}
       - XPACK_FLEET_ENABLED=true
     ports: ["5601:5601"]
     volumes:
-      - ./config/elasticsearch/certs/ca/ca.crt:/usr/share/kibana/config/certs/ca.crt:ro,Z
-      - ./config/elasticsearch/certs/kibana/kibana.crt:/usr/share/kibana/config/certs/kibana.crt:ro,Z
-      - ./config/elasticsearch/certs/kibana/kibana.key:/usr/share/kibana/config/certs/kibana.key:ro,Z
       - ./data/kibana:/usr/share/kibana/data:Z
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS --cacert /usr/share/kibana/config/certs/ca.crt https://127.0.0.1:5601/api/status || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:5601/api/status || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -476,29 +434,21 @@ services:
       - iron-stack-net
     ports:
       - "8220:8220"
-    volumes:
-      - ./config/elasticsearch/certs/ca/ca.crt:/usr/share/elastic-agent/ca.crt:ro,Z
+    depends_on:
+      kibana: { condition: service_healthy }
     environment:
       - FLEET_SERVER_ENABLE=true
-      - FLEET_SERVER_ELASTICSEARCH_HOST=https://es:9200
+      - FLEET_SERVER_ELASTICSEARCH_HOST=http://es:9200
       - FLEET_SERVER_ELASTICSEARCH_USERNAME=elastic
       - FLEET_SERVER_ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}
-      - FLEET_SERVER_ELASTICSEARCH_CA=/usr/share/elastic-agent/ca.crt
       - FLEET_SERVER_SERVICE_TOKEN=${FLEET_SERVER_SERVICE_TOKEN}
       - FLEET_SERVER_POLICY_ID=fleet-server-policy
-      - FLEET_URL=https://fleet-server:8220
+      - FLEET_URL=http://fleet-server:8220
       - KIBANA_FLEET_SETUP=true
-      - KIBANA_HOST=https://kibana:5601
-      - KIBANA_USERNAME=elastic
-      - KIBANA_PASSWORD=${ELASTIC_PASSWORD}
-      - KIBANA_CA=/usr/share/elastic-agent/ca.crt
-    depends_on:
-      es: { condition: service_healthy }
-      kibana: { condition: service_healthy }
-    profiles: ["", "persist"]
+      - KIBANA_HOST=http://kibana:5601
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS --cacert /usr/share/elastic-agent/ca.crt https://127.0.0.1:8220/api/status || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8220 >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+    profiles: ["", "persist"]
