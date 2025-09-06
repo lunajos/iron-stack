@@ -69,6 +69,15 @@ podman run -d --name postgres --network iron-stack-net -p 15432:5432 \
   docker.io/postgres:15-alpine
 ```
 
+Start Valkey:
+
+```bash
+podman run -d --name valkey --network iron-stack-net -p 6379:6379 \
+  -v /data/Projects/iron-stack/valkey.conf:/etc/valkey/valkey.conf:Z \
+  -v /data/Projects/iron-stack/data/valkey:/data:Z \
+  valkey/valkey:latest valkey-server /etc/valkey/valkey.conf
+```
+
 Start Elasticsearch:
 
 ```bash
@@ -121,8 +130,8 @@ make down
 Or manually:
 
 ```bash
-podman stop postgres es grafana kibana
-podman rm postgres es grafana kibana
+podman stop postgres valkey es grafana kibana keycloak
+podman rm postgres valkey es grafana kibana keycloak
 ```
 
 ### Resetting Data
@@ -158,7 +167,7 @@ podman logs grafana
 | Service       | URL                      | Default Credentials     | Status       |
 |---------------|--------------------------|-------------------------|-------------|
 | PostgreSQL    | localhost:15432          | kc / kcpass             | Running      |
-| Valkey        | localhost:6379           | No auth (configurable)  | Not Running  |
+| Valkey        | localhost:6379           | No auth (configurable)  | Running      |
 | Keycloak      | http://localhost:18080   | admin / admin123        | Running      |
 | Elasticsearch | http://localhost:9200    | No auth                 | Running      |
 | Kibana        | http://localhost:5601    | No auth                 | Running      |
