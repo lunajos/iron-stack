@@ -1,0 +1,38 @@
+cluster.name: "iron-stack-cluster"
+node.name: "es"
+network.host: 0.0.0.0
+
+# Enable X-Pack security
+xpack.security.enabled: true
+xpack.security.transport.ssl.enabled: true
+xpack.security.transport.ssl.verification_mode: certificate
+xpack.security.transport.ssl.keystore.path: /usr/share/elasticsearch/config/certs/es.p12
+xpack.security.transport.ssl.truststore.path: /usr/share/elasticsearch/config/certs/es.p12
+
+# Enable TLS/SSL for HTTP
+xpack.security.http.ssl.enabled: true
+xpack.security.http.ssl.keystore.path: /usr/share/elasticsearch/config/certs/es.p12
+xpack.security.http.ssl.truststore.path: /usr/share/elasticsearch/config/certs/es.p12
+
+# Enable encryption for HTTP API client connections
+xpack.security.http.ssl.client_authentication: optional
+
+# Disable anonymous access
+xpack.security.authc.anonymous.roles: []
+
+# Enable audit logging
+xpack.security.audit.enabled: true
+
+# Enable Fleet
+xpack.fleet.enabled: true
+xpack.fleet.registryUrl: "https://epr.elastic.co"
+
+# Discovery settings
+discovery.type: single-node
+
+# Memory settings
+bootstrap.memory_lock: true
+
+# Path settings
+path.data: /usr/share/elasticsearch/data
+path.logs: /usr/share/elasticsearch/logs

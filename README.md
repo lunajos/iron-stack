@@ -16,6 +16,8 @@ A mini infrastructure deployment using Podman Compose with the following service
 - Environment variables configured in `.env` file
 - Profiles for ephemeral or persistent deployments
 - Container networking for inter-service communication
+- Secure Elasticsearch and Kibana deployment with TLS/SSL and X-Pack security
+- Elastic Fleet server for centralized agent management
 
 ## Prerequisites
 
@@ -78,12 +80,29 @@ podman run -d --name valkey --network iron-stack-net -p 6379:6379 \
   valkey/valkey:latest valkey-server /etc/valkey/valkey.conf
 ```
 
-Start Elasticsearch:
+Start Elasticsearch (secure with TLS):
 
 ```bash
+# First generate certificates
+./scripts/generate-certs.sh
+
 podman run -d --name es --network iron-stack-net -p 9200:9200 \
-  -e "discovery.type=single-node" -e "xpack.security.enabled=false" \
+  -e "discovery.type=single-node" -e "xpack.security.enabled=true" \
   -e "bootstrap.memory_lock=true" -e "ES_JAVA_OPTS=-Xms1g -Xmx1g" \
+  -e "ELASTIC_PASSWORD=changeme" \
+  -e "xpack.security.http.ssl.enabled=true" \
+  -e "xpack.security.transport.ssl.enabled=true" \
+  -e "xpack.security.transport.ssl.verification_mode=certificate" \
+  -e "xpack.security.transport.ssl.keystore.path=/usr/share/elasticsearch/config/certs/es.p12" \
+  -e "xpack.security.transport.ssl.truststore.path=/usr/share/elasticsearch/config/certs/es.p12" \
+  -e "xpack.security.transport.ssl.keystore.password=changeit" \
+  -e "xpack.security.transport.ssl.truststore.password=changeit" \
+  -e "xpack.security.http.ssl.keystore.path=/usr/share/elasticsearch/config/certs/es.p12" \
+  -e "xpack.security.http.ssl.truststore.path=/usr/share/elasticsearch/config/certs/es.p12" \
+  -e "xpack.security.http.ssl.keystore.password=changeit" \
+  -e "xpack.security.http.ssl.truststore.password=changeit" \
+  -v /data/Projects/iron-stack/config/elasticsearch/certs/es/es.p12:/usr/share/elasticsearch/config/certs/es.p12:ro,Z \
+  -v /data/Projects/iron-stack/config/elasticsearch/certs/ca/ca.crt:/usr/share/elasticsearch/config/certs/ca.crt:ro,Z \
   -v /data/Projects/iron-stack/data/elasticsearch:/usr/share/elasticsearch/data:Z \
   --ulimit memlock=-1:-1 --ulimit nofile=65536:65536 \
   docker.elastic.co/elasticsearch/elasticsearch:8.14.3
@@ -99,11 +118,24 @@ podman run -d --name grafana --network iron-stack-net -p 3000:3000 \
   docker.io/grafana/grafana:11.2.0
 ```
 
-Start Kibana:
+Start Kibana (secure with TLS):
 
 ```bash
 podman run -d --name kibana --network iron-stack-net -p 5601:5601 \
-  -e "ELASTICSEARCH_HOSTS=http://es:9200" \
+  -e "ELASTICSEARCH_HOSTS=https://es:9200" \
+  -e "ELASTICSEARCH_USERNAME=elastic" \
+  -e "ELASTICSEARCH_PASSWORD=changeme" \
+  -e "ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=/usr/share/kibana/config/certs/ca.crt" \
+  -e "SERVER_SSL_ENABLED=true" \
+  -e "SERVER_SSL_CERTIFICATE=/usr/share/kibana/config/certs/kibana.crt" \
+  -e "SERVER_SSL_KEY=/usr/share/kibana/config/certs/kibana.key" \
+  -e "XPACK_SECURITY_ENCRYPTIONKEY=something_at_least_32_characters_long" \
+  -e "XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=something_at_least_32_characters_long" \
+  -e "XPACK_REPORTING_ENCRYPTIONKEY=something_at_least_32_characters_long" \
+  -e "XPACK_FLEET_ENABLED=true" \
+  -v /data/Projects/iron-stack/config/elasticsearch/certs/ca/ca.crt:/usr/share/kibana/config/certs/ca.crt:ro,Z \
+  -v /data/Projects/iron-stack/config/elasticsearch/certs/kibana/kibana.crt:/usr/share/kibana/config/certs/kibana.crt:ro,Z \
+  -v /data/Projects/iron-stack/config/elasticsearch/certs/kibana/kibana.key:/usr/share/kibana/config/certs/kibana.key:ro,Z \
   docker.elastic.co/kibana/kibana:8.14.3
 ```
 
@@ -234,8 +266,8 @@ podman logs grafana
 | PostgreSQL    | localhost:15432          | kc / kcpass             | Running      | Database                          |
 | Valkey        | localhost:6379           | No auth (configurable)  | Running      | Key-value store                   |
 | Keycloak      | http://localhost:18080   | admin / admin123        | Running      | Identity & access management      |
-| Elasticsearch | http://localhost:9200    | No auth                 | Running      | Search & analytics engine         |
-| Kibana        | http://localhost:5601    | No auth                 | Running      | Elasticsearch frontend            |
+| Elasticsearch | https://localhost:9200   | elastic / changeme      | Running      | Search & analytics engine         |
+| Kibana        | https://localhost:5601   | elastic / changeme      | Running      | Elasticsearch frontend            |
 | Prometheus    | http://localhost:9090    | No auth                 | Running      | Metrics collection & storage      |
 | Grafana       | http://localhost:3000    | admin / admin123        | Running      | Dashboards & visualization        |
 | MinIO         | http://localhost:9000    | minioadmin / minioadmin | Not Running  | S3-compatible object storage      |
@@ -275,6 +307,16 @@ The stack includes a log management solution that ships logs from services to El
 1. **Log Collection**: Scripts collect logs from PostgreSQL and Valkey containers
 2. **Log Shipping**: Logs are shipped to Elasticsearch for centralized storage
 3. **Log Visualization**: Kibana provides a web interface for searching and visualizing logs
+
+### Elastic Fleet
+
+The stack includes Elastic Fleet for centralized agent management:
+
+1. **Fleet Server**: Manages and coordinates Elastic Agents
+2. **Integrations**: Easy installation of pre-configured monitoring solutions
+3. **Agent Management**: Centralized configuration and monitoring of agents
+
+For more information on the secure Elasticsearch and Kibana deployment with Fleet, see [Elasticsearch Security Guide](docs/elasticsearch-security.md).
 
 #### Setting Up Log Shipping
 
@@ -368,6 +410,14 @@ podman run -d --name metricbeat --network iron-stack-net \
 
 - `./data/`: Contains persistent data for all services
 - `./provisioning/`: Contains configuration for services (e.g., Grafana dashboards)
+- `./config/`: Contains configuration files for services
+  - `./config/elasticsearch/`: Elasticsearch configuration and certificates
+  - `./config/kibana/`: Kibana configuration
+  - `./config/filebeat/`: Filebeat configuration
+  - `./config/metricbeat/`: Metricbeat configuration
+- `./docs/`: Documentation files
+  - `./docs/elasticsearch-security.md`: Guide for secure Elasticsearch deployment
+  - `./docs/keycloak-setup.md`: Keycloak setup guide
 - `.env`: Environment variables for all services
 - `podman-compose.yml`: Service definitions
 - `prometheus.yml`: Prometheus configuration

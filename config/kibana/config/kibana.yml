@@ -1,0 +1,29 @@
+server.name: kibana
+server.host: "0.0.0.0"
+
+# Elasticsearch connection
+elasticsearch.hosts: ["https://es:9200"]
+elasticsearch.ssl.certificateAuthorities: ["/usr/share/kibana/config/certs/ca.crt"]
+elasticsearch.ssl.verificationMode: certificate
+
+# Enable TLS/SSL for Kibana
+server.ssl.enabled: true
+server.ssl.certificate: /usr/share/kibana/config/certs/kibana.crt
+server.ssl.key: /usr/share/kibana/config/certs/kibana.key
+
+# Disable anonymous access
+xpack.security.anonymous.roles: []
+
+# Enable Fleet
+xpack.fleet.enabled: true
+xpack.fleet.agents.enabled: true
+xpack.fleet.agents.elasticsearch.hosts: ["https://es:9200"]
+xpack.fleet.agents.fleet_server.hosts: ["https://fleet-server:8220"]
+xpack.fleet.packages.enabled: true
+xpack.fleet.registryUrl: "https://epr.elastic.co"
+
+# Monitoring
+monitoring.ui.container.elasticsearch.enabled: true
+
+# Telemetry
+telemetry.enabled: false

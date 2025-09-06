@@ -20,7 +20,11 @@ filebeat.inputs:
   fields_under_root: true
 
 output.elasticsearch:
-  hosts: ["es:9200"]
+  hosts: ["https://es:9200"]
   index: "logs-%{+yyyy.MM.dd}"
+  username: "elastic"
+  password: "${ELASTICSEARCH_PASSWORD}"
+  ssl.certificate_authorities: ["/usr/share/filebeat/ca.crt"]
+  ssl.verification_mode: "certificate"
 
 logging.level: debug

@@ -20,8 +20,12 @@ metricbeat.modules:
   processes: ['.*']
 
 output.elasticsearch:
-  hosts: ["es:9200"]
+  hosts: ["https://es:9200"]
   index: "metricbeat-%{+yyyy.MM.dd}"
+  username: "elastic"
+  password: "${ELASTICSEARCH_PASSWORD}"
+  ssl.certificate_authorities: ["/usr/share/metricbeat/ca.crt"]
+  ssl.verification_mode: "certificate"
 
 setup.template.name: "metricbeat"
 setup.template.pattern: "metricbeat-*"
