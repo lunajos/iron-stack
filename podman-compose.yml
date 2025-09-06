@@ -351,3 +351,35 @@ services:
       retries: 30
     profiles: ["", "persist"]
 
+  # ---------- Zot (Container Registry) ----------
+  zot:
+    image: "ghcr.io/project-zot/zot-linux-amd64:latest"
+    container_name: zot
+    networks:
+      - iron-stack-net
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./zot-config.json:/etc/zot/config.json:Z
+      - ./data/zot:/var/lib/registry:Z
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/v2/"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    profiles: ["", "persist"]
+
+  # ---------- Metricbeat (Metrics Collector) ----------
+  metricbeat:
+    image: "docker.elastic.co/beats/metricbeat:8.14.3"
+    container_name: metricbeat
+    networks:
+      - iron-stack-net
+    user: root
+    volumes:
+      - ./config/metricbeat/metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro
+    depends_on:
+      es: { condition: service_healthy }
+      prometheus: { condition: service_started }
+    profiles: ["", "persist"]
+

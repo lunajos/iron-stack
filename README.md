@@ -154,6 +154,15 @@ podman run -d --name alertmanager --network iron-stack-net -p 9093:9093 \
   quay.io/prometheus/alertmanager:latest
 ```
 
+Start Zot (Container registry):
+
+```bash
+podman run -d --name zot --network iron-stack-net -p 5000:5000 \
+  -v /data/Projects/iron-stack/zot-config.json:/etc/zot/config.json:Z \
+  -v /data/Projects/iron-stack/data/zot:/var/lib/registry:Z \
+  ghcr.io/project-zot/zot-linux-amd64:latest
+```
+
 Start Keycloak (first time setup):
 
 ```bash
@@ -225,15 +234,58 @@ podman logs grafana
 | Mailpit       | http://localhost:8025    | No auth                 | Running      | Email testing tool                |
 | node_exporter | http://localhost:9100    | No auth                 | Running      | System metrics exporter           |
 | Alertmanager  | http://localhost:9093    | No auth                 | Running      | Alert handling & notifications    |
+| Zot           | http://localhost:5000    | No auth                 | Running      | Container registry                |
+
+## Monitoring & Dashboards
+
+The stack includes a comprehensive monitoring solution:
+
+1. **Prometheus** collects metrics from all services
+2. **Grafana** visualizes these metrics through dashboards
+3. **Alertmanager** handles alerts based on metric thresholds
+4. **Elasticsearch** can store metrics for long-term storage and analysis
+
+### Available Dashboards
+
+Access Grafana at http://localhost:3000 (admin/admin123) to view these dashboards:
+
+- **Node Exporter Dashboard**: System metrics (CPU, Memory, Disk, Network)
+
+### Adding Custom Dashboards
+
+Place dashboard JSON files in `./provisioning/grafana/dashboards/` and restart Grafana:
+
+```bash
+podman restart grafana
+```
+
+### Prometheus-Elasticsearch Integration
+
+To send Prometheus metrics to Elasticsearch for long-term storage and analysis, use Metricbeat:
+
+1. **Configuration**: A sample Metricbeat configuration is provided in `./config/metricbeat/metricbeat.yml`
+
+2. **Start Metricbeat**:
+
+```bash
+podman run -d --name metricbeat --network iron-stack-net \
+  -v /data/Projects/iron-stack/config/metricbeat/metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro \
+  --user root \
+  docker.elastic.co/beats/metricbeat:8.14.3
+```
+
+3. **View in Kibana**: Access metrics in Kibana at http://localhost:5601 by creating an index pattern for `metricbeat-*`
 
 ## Directory Structure
 
 - `./data/`: Contains persistent data for all services
-- `./provisioning/`: Contains configuration for services (e.g., Grafana datasources)
+- `./provisioning/`: Contains configuration for services (e.g., Grafana dashboards)
 - `.env`: Environment variables for all services
 - `podman-compose.yml`: Service definitions
 - `prometheus.yml`: Prometheus configuration
 - `valkey.conf`: Valkey configuration
+- `alertmanager.yml`: Alertmanager configuration
+- `zot-config.json`: Zot container registry configuration
 
 ## License
 

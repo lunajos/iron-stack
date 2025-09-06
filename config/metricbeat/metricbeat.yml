@@ -1,0 +1,30 @@
+metricbeat.modules:
+- module: prometheus
+  period: 10s
+  hosts: ["prometheus:9090"]
+  metrics_path: /metrics
+  metrics_filters:
+    include: [".*"]
+  
+- module: system
+  metricsets:
+    - cpu
+    - load
+    - memory
+    - network
+    - process
+    - process_summary
+    - filesystem
+    - fsstat
+  period: 10s
+  processes: ['.*']
+
+output.elasticsearch:
+  hosts: ["es:9200"]
+  index: "metricbeat-%{+yyyy.MM.dd}"
+
+setup.template.name: "metricbeat"
+setup.template.pattern: "metricbeat-*"
+setup.ilm.enabled: false
+
+logging.level: info
