@@ -38,32 +38,33 @@ Before starting the secure Elasticsearch and Kibana deployment, ensure you have:
 
 ## Starting the Deployment
 
-1. Start Elasticsearch with security enabled:
+The secure Elasticsearch and Kibana deployment can be started using the `make up-persist` command, which will use the configurations in `podman-compose.yml`. The setup is fully replicable with a fresh clone by following these steps:
+
+1. Clone the repository and navigate to the project directory:
    ```bash
-   podman run -d --name es --network iron-stack-net -p 9200:9200 \
-     -e "ELASTIC_PASSWORD=changeme" \
-     -e "bootstrap.memory_lock=true" \
-     -e "ES_JAVA_OPTS=-Xms1g -Xmx1g" \
-     -e "xpack.security.enabled=true" \
-     -e "discovery.type=single-node" \
-     -v /data/Projects/iron-stack/data/elasticsearch:/usr/share/elasticsearch/data:Z \
-     --ulimit memlock=-1:-1 --ulimit nofile=65536:65536 \
-     docker.elastic.co/elasticsearch/elasticsearch:8.14.3
+   git clone <repository-url>
+   cd iron-stack
    ```
 
-2. Create a service account token for Kibana:
+2. Start the secure Elasticsearch and Kibana deployment:
    ```bash
-   podman exec -it es curl -X POST -u elastic:changeme \
-     "http://localhost:9200/_security/service/elastic/kibana/credential/token/kibana-token?pretty"
+   make up-persist
    ```
 
-3. Start Kibana with the service account token:
+3. Run the security setup script to initialize the service account tokens:
    ```bash
-   podman run -d --name kibana --network iron-stack-net -p 5601:5601 \
-     -e "ELASTICSEARCH_HOSTS=http://es:9200" \
-     -e "ELASTICSEARCH_SERVICEACCOUNTTOKEN=YOUR_SERVICE_ACCOUNT_TOKEN" \
-     -v /data/Projects/iron-stack/data/kibana:/usr/share/kibana/data:Z \
-     docker.elastic.co/kibana/kibana:8.14.3
+   ./scripts/setup-elastic-security.sh
+   ```
+
+   This script will:
+   - Wait for Elasticsearch to be ready
+   - Create a Kibana service account token
+   - Update the `.env` file with the Kibana token
+   - Create a Fleet server token
+
+4. Restart Kibana to use the newly generated token:
+   ```bash
+   podman restart kibana
    ```
 
 ## Accessing Elasticsearch and Kibana
@@ -76,6 +77,30 @@ Before starting the secure Elasticsearch and Kibana deployment, ensure you have:
   - Login with Elasticsearch credentials
 
 For production deployments, it's recommended to enable TLS/SSL for secure communications.
+
+## Testing the Deployment
+
+To verify that your secure Elasticsearch and Kibana deployment is working correctly:
+
+1. Check that Elasticsearch is running with security enabled:
+   ```bash
+   podman exec -it es curl -u elastic:changeme "http://localhost:9200/_cat/indices?v"
+   ```
+   You should see a list of indices and be prompted for authentication.
+
+2. Verify that Kibana can connect to Elasticsearch:
+   ```bash
+   curl http://localhost:5601/api/status
+   ```
+   You should get a response indicating that Kibana is running.
+
+3. Open Kibana in your browser at http://localhost:5601 and log in with the Elasticsearch credentials.
+
+4. Check that the service account tokens were created successfully:
+   ```bash
+   podman exec -it es curl -u elastic:changeme "http://localhost:9200/_security/service/elastic/kibana/credential?pretty"
+   ```
+   You should see the `kibana-token` in the response.
 
 ## Using Elastic Fleet
 
