@@ -304,6 +304,26 @@ The stack includes a comprehensive monitoring solution:
 Access Grafana at http://localhost:3000 (admin/admin123) to view these dashboards:
 
 - **Node Exporter Dashboard**: System metrics (CPU, Memory, Disk, Network)
+- **PostgreSQL Performance**: Database metrics (Connections, Transactions, Cache Hit Ratio, I/O Time)
+- **Valkey Performance**: Key-value store metrics (Commands, Memory Usage, Clients, Latency)
+
+### Database Performance Monitoring
+
+The stack includes specialized monitoring for database performance:
+
+1. **PostgreSQL Exporter**: Collects detailed metrics from PostgreSQL
+   - Active connections by state
+   - Transaction rates (commits/rollbacks)
+   - Cache hit ratio
+   - I/O times for reads and writes
+
+2. **Redis/Valkey Exporter**: Monitors key-value store performance
+   - Commands processed per second
+   - Memory usage vs. maximum
+   - Connected clients
+   - Command latency
+
+These metrics help identify when databases are getting overloaded or experiencing performance issues.
 
 ### Adding Custom Dashboards
 

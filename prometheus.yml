@@ -18,6 +18,11 @@ scrape_configs:
   - job_name: 'mailpit'
     static_configs:
       - targets: ['mailpit:8025']
+      
+  - job_name: 'zot'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['zot:5000']
 
   # Keycloak readiness/metrics vary by setup; leaving target for future
   - job_name: 'keycloak'
@@ -27,11 +32,11 @@ scrape_configs:
 
   - job_name: 'postgres'
     static_configs:
-      - targets: ['localhost:15432']  # add postgres-exporter later
+      - targets: ['postgres-exporter:9187']
 
   - job_name: 'valkey'
     static_configs:
-      - targets: ['localhost:6379']    # add valkey_exporter later
+      - targets: ['redis-exporter:9121']
 
   - job_name: 'elasticsearch'
     metrics_path: /_prometheus/metrics
