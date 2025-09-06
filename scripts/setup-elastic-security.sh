@@ -11,7 +11,24 @@ echo -e "${YELLOW}Setting up Elasticsearch security...${NC}"
 
 # Wait for Elasticsearch to be ready
 echo -e "${YELLOW}Waiting for Elasticsearch to be ready...${NC}"
-until curl -s http://localhost:9200 -u elastic:changeme; do
+
+# Function to check if Elasticsearch is ready
+check_es_ready() {
+  local status_code=$(curl -s -o /dev/null -w "%{http_code}" -u elastic:changeme http://localhost:9200)
+  if [[ $status_code == "200" ]]; then
+    return 0
+  else
+    # Try through container
+    local container_status=$(podman exec -it es curl -s -o /dev/null -w "%{http_code}" -u elastic:changeme http://localhost:9200 2>/dev/null || echo "000")
+    if [[ $container_status == "200" ]]; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+# Wait for Elasticsearch to be ready
+while ! check_es_ready; do
   echo -e "${YELLOW}Elasticsearch is not ready yet, waiting...${NC}"
   sleep 5
 done
@@ -24,15 +41,31 @@ ELASTIC_PASSWORD=$(grep ELASTIC_PASSWORD .env | cut -d= -f2)
 # Create Kibana service account token
 echo -e "${YELLOW}Creating Kibana service account token...${NC}"
 
+# Function to run a command either directly or through the container
+run_es_command() {
+  local command=$1
+  local result
+  
+  # Try direct access first
+  local status_code=$(curl -s -o /dev/null -w "%{http_code}" -u elastic:changeme http://localhost:9200)
+  if [[ $status_code == "200" ]]; then
+    result=$(eval "$command")
+    echo "$result"
+    return 0
+  fi
+  
+  # Try through container if direct access fails
+  command="${command/curl/podman exec -it es curl}"
+  result=$(eval "$command")
+  echo "$result"
+  return 0
+}
+
 # Delete existing token if it exists
-podman exec -it es curl -s -X DELETE \
-  -u elastic:${ELASTIC_PASSWORD} \
-  http://localhost:9200/_security/service/elastic/kibana/credential/token/kibana-token
+run_es_command "curl -s -X DELETE -u elastic:${ELASTIC_PASSWORD} http://localhost:9200/_security/service/elastic/kibana/credential/token/kibana-token"
 
 # Create new token
-podman exec -it es curl -s -X POST \
-  -u elastic:${ELASTIC_PASSWORD} \
-  http://localhost:9200/_security/service/elastic/kibana/credential/token/kibana-token | tee kibana-token-response.json
+run_es_command "curl -s -X POST -u elastic:${ELASTIC_PASSWORD} http://localhost:9200/_security/service/elastic/kibana/credential/token/kibana-token" | tee kibana-token-response.json
 
 # Extract the token value
 KIBANA_TOKEN_VALUE=$(cat kibana-token-response.json | grep -o '"value":"[^"]*"' | cut -d'"' -f4)
@@ -49,9 +82,7 @@ fi
 
 # Create Fleet Server service token if it doesn't exist
 echo -e "${YELLOW}Creating Fleet Server service token...${NC}"
-podman exec -it es curl -s -X POST \
-  -u elastic:${ELASTIC_PASSWORD} \
-  http://localhost:9200/_security/service/elastic/fleet-server/credential/token/fleet-token-1 | tee fleet-token-response.json
+run_es_command "curl -s -X POST -u elastic:${ELASTIC_PASSWORD} http://localhost:9200/_security/service/elastic/fleet-server/credential/token/fleet-token-1" | tee fleet-token-response.json
 
 # Extract the token value
 FLEET_TOKEN_VALUE=$(cat fleet-token-response.json | grep -o '"value":"[^"]*"' | cut -d'"' -f4)
