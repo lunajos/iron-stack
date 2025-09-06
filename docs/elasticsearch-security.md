@@ -1,80 +1,131 @@
 # Secure Elasticsearch and Kibana Deployment
 
-This document provides instructions for setting up and using the secure Elasticsearch and Kibana deployment with TLS/SSL and X-Pack security enabled.
+This document provides instructions for setting up and using the secure Elasticsearch and Kibana deployment with X-Pack security enabled.
 
 ## Features
 
-- TLS/SSL encryption for all communications
-- X-Pack security enabled
+- X-Pack security enabled for authentication and authorization
+- Service account tokens for secure service-to-service communication
 - Elastic Fleet server for agent management
 - Authentication for all Elasticsearch and Kibana access
 - Integration with Metricbeat and Filebeat
+
+## Testing Results
+
+We have successfully tested the secure Elasticsearch and Kibana deployment with the following configuration:
+
+- Elasticsearch with X-Pack security enabled
+- Kibana using a service account token for authentication
+- Verified access to Elasticsearch indices
+- Verified access to Kibana web interface
 
 ## Prerequisites
 
 Before starting the secure Elasticsearch and Kibana deployment, ensure you have:
 
-1. Generated the necessary certificates using the provided script:
-   ```bash
-   ./scripts/generate-certs.sh
-   ```
-
-2. Updated the `.env` file with secure passwords:
+1. Updated the `.env` file with secure passwords:
    ```
    ELASTIC_PASSWORD=your_secure_password_here
    KIBANA_ENCRYPTION_KEY=at_least_32_characters_long_random_string
    ```
 
-## Starting the Deployment
-
-1. Start the secure Elasticsearch deployment:
+2. Sufficient permissions for data directories:
    ```bash
-   podman-compose up -d es kibana fleet-server
+   mkdir -p /data/Projects/iron-stack/data/elasticsearch
+   mkdir -p /data/Projects/iron-stack/data/kibana
+   chmod 777 /data/Projects/iron-stack/data/kibana
    ```
 
-2. Wait for Elasticsearch to be ready (this may take a minute or two).
+## Starting the Deployment
 
-3. Run the security setup script to initialize the Fleet server token:
+1. Start Elasticsearch with security enabled:
    ```bash
-   ./scripts/setup-elastic-security.sh
+   podman run -d --name es --network iron-stack-net -p 9200:9200 \
+     -e "ELASTIC_PASSWORD=changeme" \
+     -e "bootstrap.memory_lock=true" \
+     -e "ES_JAVA_OPTS=-Xms1g -Xmx1g" \
+     -e "xpack.security.enabled=true" \
+     -e "discovery.type=single-node" \
+     -v /data/Projects/iron-stack/data/elasticsearch:/usr/share/elasticsearch/data:Z \
+     --ulimit memlock=-1:-1 --ulimit nofile=65536:65536 \
+     docker.elastic.co/elasticsearch/elasticsearch:8.14.3
+   ```
+
+2. Create a service account token for Kibana:
+   ```bash
+   podman exec -it es curl -X POST -u elastic:changeme \
+     "http://localhost:9200/_security/service/elastic/kibana/credential/token/kibana-token?pretty"
+   ```
+
+3. Start Kibana with the service account token:
+   ```bash
+   podman run -d --name kibana --network iron-stack-net -p 5601:5601 \
+     -e "ELASTICSEARCH_HOSTS=http://es:9200" \
+     -e "ELASTICSEARCH_SERVICEACCOUNTTOKEN=YOUR_SERVICE_ACCOUNT_TOKEN" \
+     -v /data/Projects/iron-stack/data/kibana:/usr/share/kibana/data:Z \
+     docker.elastic.co/kibana/kibana:8.14.3
    ```
 
 ## Accessing Elasticsearch and Kibana
 
-- **Elasticsearch**: https://localhost:9200
+- **Elasticsearch**: http://localhost:9200
   - Username: `elastic`
   - Password: The value of `ELASTIC_PASSWORD` in your `.env` file
 
-- **Kibana**: https://localhost:5601
-  - Username: `elastic`
-  - Password: The value of `ELASTIC_PASSWORD` in your `.env` file
+- **Kibana**: http://localhost:5601
+  - Login with Elasticsearch credentials
 
-**Note**: Since we're using self-signed certificates, your browser will show a security warning. You can safely proceed by accepting the risk.
+For production deployments, it's recommended to enable TLS/SSL for secure communications.
 
 ## Using Elastic Fleet
 
 Elastic Fleet is enabled in this deployment, allowing you to manage agents and integrations centrally.
 
-1. Access Kibana at https://localhost:5601
+1. Access Kibana at http://localhost:5601
 2. Navigate to Management → Fleet
 3. Follow the setup instructions to add integrations
 
-The Fleet server is accessible at https://fleet-server:8220 from within the container network.
+To set up a Fleet server:
+
+```bash
+podman run -d --name fleet-server --network iron-stack-net -p 8220:8220 \
+  -e "FLEET_SERVER_ENABLE=true" \
+  -e "FLEET_SERVER_ELASTICSEARCH_HOST=http://es:9200" \
+  -e "FLEET_SERVER_ELASTICSEARCH_USERNAME=elastic" \
+  -e "FLEET_SERVER_ELASTICSEARCH_PASSWORD=changeme" \
+  -e "FLEET_SERVER_SERVICE_TOKEN=YOUR_FLEET_SERVICE_TOKEN" \
+  -e "FLEET_SERVER_POLICY_ID=fleet-server-policy" \
+  -e "FLEET_URL=http://fleet-server:8220" \
+  -e "KIBANA_FLEET_SETUP=true" \
+  -e "KIBANA_HOST=http://kibana:5601" \
+  docker.elastic.co/beats/elastic-agent:8.14.3
+```
 
 ## Troubleshooting
 
-### Certificate Issues
+### Common Issues
 
-If you encounter certificate-related errors:
+#### Permission Issues
 
-1. Verify that the certificates were generated correctly:
+If you encounter permission issues with data directories:
+
+```bash
+chmod 777 /data/Projects/iron-stack/data/kibana
+```
+
+#### Kibana Authentication Issues
+
+If Kibana fails to start with an error about using the elastic superuser:
+
+1. Create a service account token for Kibana:
    ```bash
-   ls -la config/elasticsearch/certs/
+   podman exec -it es curl -X POST -u elastic:changeme \
+     "http://localhost:9200/_security/service/elastic/kibana/credential/token/kibana-token?pretty"
    ```
 
-2. Ensure the certificates are mounted correctly in the containers:
+2. Use the token when starting Kibana:
    ```bash
-   podman exec -it es ls -la /usr/share/elasticsearch/config/certs/
+   -e "ELASTICSEARCH_SERVICEACCOUNTTOKEN=YOUR_SERVICE_ACCOUNT_TOKEN"
    ```
 
 ### Authentication Issues
