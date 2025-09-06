@@ -107,6 +107,28 @@ podman run -d --name kibana --network iron-stack-net -p 5601:5601 \
   docker.elastic.co/kibana/kibana:8.14.3
 ```
 
+Start Prometheus:
+
+```bash
+podman run -d --name prometheus --network iron-stack-net -p 9090:9090 \
+  -v /data/Projects/iron-stack/prometheus.yml:/etc/prometheus/prometheus.yml:Z \
+  -v /data/Projects/iron-stack/data/prometheus:/prometheus:Z \
+  docker.io/prom/prometheus:v2.54.1 \
+  --config.file=/etc/prometheus/prometheus.yml \
+  --storage.tsdb.path=/prometheus \
+  --web.enable-lifecycle
+```
+
+Start MinIO (S3-compatible object storage):
+
+```bash
+podman run -d --name minio --network iron-stack-net -p 9000:9000 -p 9001:9001 \
+  -e "MINIO_ROOT_USER=minioadmin" \
+  -e "MINIO_ROOT_PASSWORD=minioadmin" \
+  -v /data/Projects/iron-stack/data/minio:/data:Z \
+  quay.io/minio/minio:latest server /data --console-address ":9001"
+```
+
 Start Keycloak (first time setup):
 
 ```bash
@@ -116,7 +138,7 @@ podman run -d --name keycloak --network iron-stack-net -p 18080:18080 \
   -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin123 \
   -e KC_HOSTNAME=localhost \
   -v /data/Projects/iron-stack/data/keycloak:/opt/keycloak/data:Z \
-  quay.io/keycloak/keycloak:26.0 start
+  quay.io/keycloak/keycloak:26.0 start-dev
 ```
 
 > **Note**: For Keycloak, do not use the `--optimized` flag on first startup. See [Keycloak Setup Guide](docs/keycloak-setup.md) for details on optimized mode.
@@ -130,8 +152,8 @@ make down
 Or manually:
 
 ```bash
-podman stop postgres valkey es grafana kibana keycloak
-podman rm postgres valkey es grafana kibana keycloak
+podman stop postgres valkey es grafana kibana keycloak prometheus minio
+podman rm postgres valkey es grafana kibana keycloak prometheus minio
 ```
 
 ### Resetting Data
@@ -171,8 +193,10 @@ podman logs grafana
 | Keycloak      | http://localhost:18080   | admin / admin123        | Running      |
 | Elasticsearch | http://localhost:9200    | No auth                 | Running      |
 | Kibana        | http://localhost:5601    | No auth                 | Running      |
-| Prometheus    | http://localhost:9090    | No auth                 | Not Running  |
+| Prometheus    | http://localhost:9090    | No auth                 | Running      |
 | Grafana       | http://localhost:3000    | admin / admin123        | Running      |
+| MinIO         | http://localhost:9000    | minioadmin / minioadmin | Running      |
+| MinIO Console | http://localhost:9001    | minioadmin / minioadmin | Running      |
 
 ## Directory Structure
 
