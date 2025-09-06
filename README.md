@@ -174,6 +174,12 @@ podman logs grafana
 - `prometheus.yml`: Prometheus configuration
 - `valkey.conf`: Valkey configuration
 
+## License
+
+This project is licensed under a proprietary license. See the [LICENSE](LICENSE) file for details.
+
+**Important**: This software is provided with restricted usage rights. You may view and fork this repository solely for evaluation purposes. Any other use requires explicit written permission from the copyright holder.
+
 ## Troubleshooting
 
 ### Network Issues
