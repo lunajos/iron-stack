@@ -441,6 +441,7 @@ services:
       - FLEET_SERVER_ELASTICSEARCH_HOST=http://es:9200
       - FLEET_SERVER_ELASTICSEARCH_USERNAME=elastic
       - FLEET_SERVER_ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}
+      # The setup script will create this token
       - FLEET_SERVER_SERVICE_TOKEN=${FLEET_SERVER_SERVICE_TOKEN}
       - FLEET_SERVER_POLICY_ID=fleet-server-policy
       - FLEET_URL=http://fleet-server:8220
