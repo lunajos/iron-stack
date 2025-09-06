@@ -266,7 +266,31 @@ podman push localhost:5000/myimage:latest
 podman pull localhost:5000/myimage:latest
 ```
 
-## Monitoring & Dashboards
+## Logging & Monitoring
+
+### Log Management
+
+The stack includes a log management solution that ships logs from services to Elasticsearch:
+
+1. **Log Collection**: Scripts collect logs from PostgreSQL and Valkey containers
+2. **Log Shipping**: Logs are shipped to Elasticsearch for centralized storage
+3. **Log Visualization**: Kibana provides a web interface for searching and visualizing logs
+
+#### Setting Up Log Shipping
+
+To enable automatic log shipping from PostgreSQL and Valkey to Elasticsearch:
+
+```bash
+# Run the setup script to create a cron job (runs every 5 minutes)
+/data/Projects/iron-stack/scripts/setup-log-schedule.sh
+
+# To manually collect and ship logs
+/data/Projects/iron-stack/scripts/ship-logs-to-elastic.sh
+```
+
+Logs are stored in Elasticsearch with the index pattern `logs-{service}-{date}` and can be viewed in Kibana.
+
+### Monitoring & Dashboards
 
 The stack includes a comprehensive monitoring solution:
 

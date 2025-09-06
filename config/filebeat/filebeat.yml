@@ -1,0 +1,26 @@
+filebeat.inputs:
+# PostgreSQL logs
+- type: log
+  enabled: true
+  paths:
+    - /logs/postgres/*.log
+  tags: ["postgres"]
+  fields:
+    service: postgres
+  fields_under_root: true
+
+# Valkey logs
+- type: log
+  enabled: true
+  paths:
+    - /logs/valkey/*.log
+  tags: ["valkey"]
+  fields:
+    service: valkey
+  fields_under_root: true
+
+output.elasticsearch:
+  hosts: ["es:9200"]
+  index: "logs-%{+yyyy.MM.dd}"
+
+logging.level: debug
