@@ -163,6 +163,15 @@ podman run -d --name zot --network iron-stack-net -p 5000:5000 \
   ghcr.io/project-zot/zot-linux-amd64:latest
 ```
 
+Start Registry UI (Zot web interface):
+
+```bash
+podman run -d --name registry-ui --network iron-stack-net -p 8081:80 \
+  -e REGISTRY_URL=http://zot:5000 \
+  -e DELETE_IMAGES=true \
+  joxit/docker-registry-ui:latest
+```
+
 Start Keycloak (first time setup):
 
 ```bash
@@ -235,6 +244,27 @@ podman logs grafana
 | node_exporter | http://localhost:9100    | No auth                 | Running      | System metrics exporter           |
 | Alertmanager  | http://localhost:9093    | No auth                 | Running      | Alert handling & notifications    |
 | Zot           | http://localhost:5000    | No auth                 | Running      | Container registry                |
+| Registry UI   | http://localhost:8081    | No auth                 | Running      | Zot registry web interface        |
+
+## Container Registry
+
+The stack includes a container registry solution:
+
+1. **Zot** provides a lightweight OCI container registry
+2. **Registry UI** offers a web interface for the registry
+
+### Using the Registry
+
+Access the Registry UI at http://localhost:8081 to view and manage your container images.
+
+```bash
+# Push an image to your registry
+podman tag myimage:latest localhost:5000/myimage:latest
+podman push localhost:5000/myimage:latest
+
+# Pull an image from your registry
+podman pull localhost:5000/myimage:latest
+```
 
 ## Monitoring & Dashboards
 

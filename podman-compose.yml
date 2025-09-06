@@ -368,6 +368,21 @@ services:
       timeout: 3s
       retries: 30
     profiles: ["", "persist"]
+    
+  # ---------- Registry UI (Zot Frontend) ----------
+  registry-ui:
+    image: "joxit/docker-registry-ui:latest"
+    container_name: registry-ui
+    networks:
+      - iron-stack-net
+    ports:
+      - "8081:80"
+    environment:
+      REGISTRY_URL: "http://zot:5000"
+      DELETE_IMAGES: "true"
+    depends_on:
+      zot: { condition: service_started }
+    profiles: ["", "persist"]
 
   # ---------- Metricbeat (Metrics Collector) ----------
   metricbeat:
