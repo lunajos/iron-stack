@@ -62,10 +62,21 @@ run_es_command() {
 }
 
 # Delete existing token if it exists
+echo -e "${YELLOW}Deleting existing Kibana token if it exists...${NC}"
 run_es_command "curl -s -X DELETE -u elastic:${ELASTIC_PASSWORD} http://localhost:9200/_security/service/elastic/kibana/credential/token/kibana-token"
 
 # Create new token
-run_es_command "curl -s -X POST -u elastic:${ELASTIC_PASSWORD} http://localhost:9200/_security/service/elastic/kibana/credential/token/kibana-token" | tee kibana-token-response.json
+echo -e "${YELLOW}Creating new Kibana token...${NC}"
+TOKEN_RESPONSE=$(run_es_command "curl -s -X POST -u elastic:${ELASTIC_PASSWORD} http://localhost:9200/_security/service/elastic/kibana/credential/token/kibana-token")
+echo "$TOKEN_RESPONSE" > kibana-token-response.json
+
+# Check if token creation was successful
+if echo "$TOKEN_RESPONSE" | grep -q "created.*true"; then
+  echo -e "${GREEN}Kibana token created successfully!${NC}"
+else
+  echo -e "${RED}Failed to create Kibana token. Response: $TOKEN_RESPONSE${NC}"
+  exit 1
+fi
 
 # Extract the token value
 KIBANA_TOKEN_VALUE=$(cat kibana-token-response.json | grep -o '"value":"[^"]*"' | cut -d'"' -f4)
@@ -82,7 +93,13 @@ fi
 
 # Create Fleet Server service token if it doesn't exist
 echo -e "${YELLOW}Creating Fleet Server service token...${NC}"
-run_es_command "curl -s -X POST -u elastic:${ELASTIC_PASSWORD} http://localhost:9200/_security/service/elastic/fleet-server/credential/token/fleet-token-1" | tee fleet-token-response.json
+
+# Delete existing token if it exists
+run_es_command "curl -s -X DELETE -u elastic:${ELASTIC_PASSWORD} http://localhost:9200/_security/service/elastic/fleet-server/credential/token/fleet-token-1" > /dev/null
+
+# Create new token
+FLEET_RESPONSE=$(run_es_command "curl -s -X POST -u elastic:${ELASTIC_PASSWORD} http://localhost:9200/_security/service/elastic/fleet-server/credential/token/fleet-token-1")
+echo "$FLEET_RESPONSE" > fleet-token-response.json
 
 # Extract the token value
 FLEET_TOKEN_VALUE=$(cat fleet-token-response.json | grep -o '"value":"[^"]*"' | cut -d'"' -f4)
@@ -90,6 +107,10 @@ FLEET_TOKEN_VALUE=$(cat fleet-token-response.json | grep -o '"value":"[^"]*"' | 
 if [ -n "$FLEET_TOKEN_VALUE" ]; then
   echo -e "${GREEN}Fleet Server token created successfully!${NC}"
   echo -e "${GREEN}Fleet Server token: ${FLEET_TOKEN_VALUE}${NC}"
+  
+  # Store the Fleet token in a separate environment variable
+  echo "FLEET_TOKEN=${FLEET_TOKEN_VALUE}" >> .env
+  echo -e "${GREEN}Added FLEET_TOKEN to .env file${NC}"
 else
   echo -e "${RED}Failed to create Fleet Server token!${NC}"
 fi

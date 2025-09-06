@@ -46,14 +46,33 @@ The secure Elasticsearch and Kibana deployment can be started using the `make up
    cd iron-stack
    ```
 
-2. Create a custom network for Elasticsearch and Kibana to communicate:
+2. Start the secure Elasticsearch and Kibana deployment:
    ```bash
-   podman network create elastic-net
+   make up-persist
    ```
 
-3. Start Elasticsearch with the custom network:
+3. Run the security setup script to initialize the service account tokens:
    ```bash
-   podman run -d --name es --network elastic-net -p 9200:9200 \
+   ./scripts/setup-elastic-security.sh
+   ```
+
+   This script will:
+   - Wait for Elasticsearch to be ready
+   - Delete any existing Kibana service account token
+   - Create a new Kibana service account token
+   - Update the `.env` file with the Kibana token
+   - Create a Fleet server token
+
+4. Restart Kibana to use the newly generated token:
+   ```bash
+   podman restart kibana
+   ```
+
+Alternatively, if you prefer to start the services manually:
+
+1. Start Elasticsearch with security enabled:
+   ```bash
+   podman run -d --name es --network iron-stack-net -p 9200:9200 \
      -e "ELASTIC_PASSWORD=changeme" \
      -e "bootstrap.memory_lock=true" \
      -e "ES_JAVA_OPTS=-Xms1g -Xmx1g" \
@@ -65,20 +84,14 @@ The secure Elasticsearch and Kibana deployment can be started using the `make up
      docker.elastic.co/elasticsearch/elasticsearch:8.14.3
    ```
 
-4. Run the security setup script to initialize the service account tokens:
+2. Run the security setup script to initialize the service account tokens:
    ```bash
    ./scripts/setup-elastic-security.sh
    ```
 
-   This script will:
-   - Wait for Elasticsearch to be ready
-   - Create a Kibana service account token
-   - Update the `.env` file with the Kibana token
-   - Create a Fleet server token
-
-5. Start Kibana with the generated token and on the same network:
+3. Start Kibana with the generated token:
    ```bash
-   podman run -d --name kibana --network elastic-net -p 5601:5601 \
+   podman run -d --name kibana --network iron-stack-net -p 5601:5601 \
      -e "ELASTICSEARCH_HOSTS=http://es:9200" \
      -e "ELASTICSEARCH_SERVICEACCOUNTTOKEN=$(grep FLEET_SERVER_SERVICE_TOKEN .env | cut -d= -f2)" \
      -e "XPACK_SECURITY_ENCRYPTIONKEY=something_at_least_32_characters_long" \
@@ -89,7 +102,7 @@ The secure Elasticsearch and Kibana deployment can be started using the `make up
      docker.elastic.co/kibana/kibana:8.14.3
    ```
 
-> **Note:** Ensuring both containers are on the same network is critical for hostname resolution. The `elastic-net` network allows Kibana to resolve the `es` hostname to reach Elasticsearch.
+> **Note:** Ensuring both containers are on the same network is critical for hostname resolution. The network allows Kibana to resolve the `es` hostname to reach Elasticsearch.
 
 ## Accessing Elasticsearch and Kibana
 
@@ -164,16 +177,36 @@ chmod 777 /data/Projects/iron-stack/data/kibana
 
 #### Kibana Authentication Issues
 
-If Kibana fails to start with an error about using the elastic superuser:
+If Kibana fails to start with an error about service account token authentication:
 
-1. Create a service account token for Kibana:
+1. Check the Kibana logs for specific error messages:
    ```bash
+   podman logs kibana | grep -i error
+   ```
+
+2. If you see an error like `failed to authenticate service account [elastic/kibana] with token name [kibana-token]`, recreate the token:
+   ```bash
+   # Delete the existing token
+   podman exec -it es curl -X DELETE -u elastic:changeme \
+     "http://localhost:9200/_security/service/elastic/kibana/credential/token/kibana-token?pretty"
+   
+   # Create a new token
    podman exec -it es curl -X POST -u elastic:changeme \
      "http://localhost:9200/_security/service/elastic/kibana/credential/token/kibana-token?pretty"
    ```
 
-2. Use the token when starting Kibana:
+3. Update the token in the `.env` file and restart Kibana:
    ```bash
+   # Update the token in .env (replace YOUR_TOKEN with the actual token value)
+   sed -i "s|FLEET_SERVER_SERVICE_TOKEN=.*|FLEET_SERVER_SERVICE_TOKEN=YOUR_TOKEN|" .env
+   
+   # Restart Kibana
+   podman restart kibana
+   ```
+
+4. If you see an error about using the elastic superuser, make sure to use a service account token instead:
+   ```bash
+   # Use service account token instead of username/password
    -e "ELASTICSEARCH_SERVICEACCOUNTTOKEN=YOUR_SERVICE_ACCOUNT_TOKEN"
    ```
 
