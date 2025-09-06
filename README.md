@@ -306,10 +306,12 @@ Access Grafana at http://localhost:3000 (admin/admin123) to view these dashboard
 - **Node Exporter Dashboard**: System metrics (CPU, Memory, Disk, Network)
 - **PostgreSQL Performance**: Database metrics (Connections, Transactions, Cache Hit Ratio, I/O Time)
 - **Valkey Performance**: Key-value store metrics (Commands, Memory Usage, Clients, Latency)
+- **Keycloak Performance**: Identity provider metrics (Sessions, Logins, Response Time, JVM Memory)
+- **MinIO Performance**: Object storage metrics (S3 API Requests, Data Transfer, Storage Usage, API Latency)
 
-### Database Performance Monitoring
+### Service Performance Monitoring
 
-The stack includes specialized monitoring for database performance:
+The stack includes specialized monitoring for all critical services:
 
 1. **PostgreSQL Exporter**: Collects detailed metrics from PostgreSQL
    - Active connections by state
@@ -323,7 +325,19 @@ The stack includes specialized monitoring for database performance:
    - Connected clients
    - Command latency
 
-These metrics help identify when databases are getting overloaded or experiencing performance issues.
+3. **Keycloak Metrics**: Monitors identity provider performance
+   - Active sessions
+   - Login attempts (successful and failed)
+   - Response times
+   - JVM memory usage
+
+4. **MinIO Metrics**: Monitors object storage performance
+   - S3 API requests by type
+   - Data transfer (received/sent)
+   - Storage usage
+   - API latency
+
+These metrics help identify when services are getting overloaded or experiencing performance issues.
 
 ### Adding Custom Dashboards
 
