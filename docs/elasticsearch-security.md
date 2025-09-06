@@ -46,12 +46,26 @@ The secure Elasticsearch and Kibana deployment can be started using the `make up
    cd iron-stack
    ```
 
-2. Start the secure Elasticsearch and Kibana deployment:
+2. Create a custom network for Elasticsearch and Kibana to communicate:
    ```bash
-   make up-persist
+   podman network create elastic-net
    ```
 
-3. Run the security setup script to initialize the service account tokens:
+3. Start Elasticsearch with the custom network:
+   ```bash
+   podman run -d --name es --network elastic-net -p 9200:9200 \
+     -e "ELASTIC_PASSWORD=changeme" \
+     -e "bootstrap.memory_lock=true" \
+     -e "ES_JAVA_OPTS=-Xms1g -Xmx1g" \
+     -e "xpack.security.enabled=true" \
+     -e "discovery.type=single-node" \
+     -e "xpack.license.self_generated.type=basic" \
+     -v ./data/elasticsearch:/usr/share/elasticsearch/data:Z \
+     --ulimit memlock=-1:-1 --ulimit nofile=65536:65536 \
+     docker.elastic.co/elasticsearch/elasticsearch:8.14.3
+   ```
+
+4. Run the security setup script to initialize the service account tokens:
    ```bash
    ./scripts/setup-elastic-security.sh
    ```
@@ -62,10 +76,20 @@ The secure Elasticsearch and Kibana deployment can be started using the `make up
    - Update the `.env` file with the Kibana token
    - Create a Fleet server token
 
-4. Restart Kibana to use the newly generated token:
+5. Start Kibana with the generated token and on the same network:
    ```bash
-   podman restart kibana
+   podman run -d --name kibana --network elastic-net -p 5601:5601 \
+     -e "ELASTICSEARCH_HOSTS=http://es:9200" \
+     -e "ELASTICSEARCH_SERVICEACCOUNTTOKEN=$(grep FLEET_SERVER_SERVICE_TOKEN .env | cut -d= -f2)" \
+     -e "XPACK_SECURITY_ENCRYPTIONKEY=something_at_least_32_characters_long" \
+     -e "XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=something_at_least_32_characters_long" \
+     -e "XPACK_REPORTING_ENCRYPTIONKEY=something_at_least_32_characters_long" \
+     -e "XPACK_FLEET_ENABLED=true" \
+     -v ./data/kibana:/usr/share/kibana/data:Z \
+     docker.elastic.co/kibana/kibana:8.14.3
    ```
+
+> **Note:** Ensuring both containers are on the same network is critical for hostname resolution. The `elastic-net` network allows Kibana to resolve the `es` hostname to reach Elasticsearch.
 
 ## Accessing Elasticsearch and Kibana
 
@@ -151,6 +175,25 @@ If Kibana fails to start with an error about using the elastic superuser:
 2. Use the token when starting Kibana:
    ```bash
    -e "ELASTICSEARCH_SERVICEACCOUNTTOKEN=YOUR_SERVICE_ACCOUNT_TOKEN"
+   ```
+
+#### Network Connectivity Issues
+
+If you see errors like `getaddrinfo ENOTFOUND es` in the Kibana logs:
+
+1. Make sure both Elasticsearch and Kibana are on the same network:
+   ```bash
+   # Create a custom network
+   podman network create elastic-net
+   
+   # Start both containers on this network
+   podman run -d --name es --network elastic-net ... docker.elastic.co/elasticsearch/elasticsearch:8.14.3
+   podman run -d --name kibana --network elastic-net ... docker.elastic.co/kibana/kibana:8.14.3
+   ```
+
+2. Verify network connectivity between containers:
+   ```bash
+   podman exec -it kibana ping es
    ```
 
 ### Authentication Issues
